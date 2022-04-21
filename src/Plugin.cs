@@ -1,16 +1,28 @@
 ﻿using BepInEx;
+using System.Linq;
 
-namespace RainWorldPlugin
+namespace DeathFixFix;
+
+[BepInPlugin("com.github.dualiron.deathfixfix", nameof(DeathFixFix), "1.0.0")]
+public sealed class Plugin : BaseUnityPlugin
 {
-    [BepInPlugin("org.author.rainworldplugin", nameof(RainWorldPlugin), "0.1.0")]
-    public sealed class Plugin : BaseUnityPlugin
+    public void OnEnable()
     {
-        // Entry point for the plugin.
-        public void OnEnable()
-        {
-            PluginState state = new PluginState(Logger);
+		On.RegionState.RainCycleTick += RegionState_RainCycleTick;
+	}
 
-            _ = new Hooks(state);
-        }
-    }
+	private void RegionState_RainCycleTick(On.RegionState.orig_RainCycleTick orig, RegionState self, int ticks, int foodRepBonus)
+	{
+		orig(self, ticks, foodRepBonus);
+
+		if (ticks > 0) {
+			for (int i = 0; i < self.world.NumberOfRooms; i++) {
+				AbstractRoom abstractRoom = self.world.GetAbstractRoom(self.world.firstRoomIndex + i);
+
+                foreach (var creatureInDen in abstractRoom.entitiesInDens.OfType<AbstractCreature>()) {
+					creatureInDen.state.CycleTick();
+                }
+			}
+		}
+	}
 }
